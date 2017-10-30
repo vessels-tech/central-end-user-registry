@@ -1,0 +1,4 @@
+{
+  "PORT": 3001,
+  "HOSTNAME": "http://central-end-user-registry"
+}
