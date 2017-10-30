@@ -1,12 +1,12 @@
 {
-  "name": "@leveloneproject/central-end-user-registry",
+  "name": "@mojaloop/central-end-user-registry",
   "version": "0.9.0",
   "description": "Central end user registry",
   "license": "Apache-2.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git@github.com:LevelOneProject/central-end-user-registry.git"
+    "url": "git@github.com:mojaloop/central-end-user-registry.git"
   },
   "config": {
     "knex": "--knexfile ./config/knexfile.js"
@@ -35,9 +35,9 @@
     "docker:clean": "docker-compose -f docker-compose.yml -f docker-compose.functional.yml down --rmi local"
   },
   "dependencies": {
-    "@leveloneproject/central-services-database": "^0.2.1",
-    "@leveloneproject/central-services-error-handling": "0.3.0",
-    "@leveloneproject/central-services-shared": "0.3.0",
+    "@mojaloop/central-services-database": "^0.2.1",
+    "@mojaloop/central-services-error-handling": "0.3.0",
+    "@mojaloop/central-services-shared": "0.3.0",
     "blipp": "2.3.0",
     "bluebird": "3.5.0",
     "boom": "4.3.1",
