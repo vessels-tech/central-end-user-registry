@@ -1,6 +1,6 @@
 # central-end-user-registry
 
-The central end user registry is an example service that shows the power of the [central directory](https://github.com/@mojaloop/central-directory). It can be used to register a DFSP's payment URL and receive a user number in return. The user number can then be looked up through the central directory when making a payment.
+The central end user registry is an example service that shows the power of the [central directory](https://github.com/mojaloop/central-directory). It can be used to register a DFSP's payment URL and receive a user number in return. The user number can then be looked up through the central directory when making a payment.
 
 The following documentation represents the services, APIs and endpoints responsible for various end user registry functions.
 
