@@ -23,7 +23,7 @@ In this document we'll walk through the setup for the Central End User Registry.
 ***
 
 ### Setup
-Make sure you have access to the [Level One Project on Github](https://github.com/@mojaloop/central-end-user-registry) and clone the project.
+Make sure you have access to [Mojaloop on Github](https://github.com/mojaloop/central-end-user-registry) and clone the project.
 
 To install Homebrew run this in a terminal window:
 ```
