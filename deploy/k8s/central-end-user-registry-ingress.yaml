@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: central-end-user-registry
+  labels:
+      app: central-end-user-registry
+spec:
+  rules:
+    - host: central-end-user-registry.local
+      http:
+        paths:
+        - backend:
+            serviceName: central-end-user-registry
+            servicePort: 3001

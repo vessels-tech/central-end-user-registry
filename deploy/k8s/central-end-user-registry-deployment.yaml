@@ -1,0 +1,53 @@
+---
+ apiVersion: extensions/v1beta1
+ kind: Deployment
+ metadata:
+    name: central-end-user-registry-deployment
+    labels:
+      app: central-end-user-registry
+ spec:
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: central-end-user-registry
+      spec:
+        containers:
+          - name: central-end-user-registry
+            image: mojaloop/central-end-user-registry:latest
+            ports:
+              - containerPort: 3001
+            livenessProbe:
+              httpGet:
+                path: /health
+                port: 3001
+              initialDelaySeconds: 60
+              periodSeconds: 10
+            env:
+              - name: CREG_HOSTNAME
+                valueFrom:
+                  configMapKeyRef:
+                    name: central-end-user-registry-config
+                    key: server.host
+              - name: CREG_PORT
+                valueFrom:
+                  configMapKeyRef:
+                    name: central-end-user-registry-config
+                    key: server.port
+              - name: CREG_DATABASE_URI
+                valueFrom:
+                  secretKeyRef:
+                    name: central-end-user-registry-secret
+                    key: db.uri
+            volumeMounts:
+            - name: config-volume
+              mountPath: /opt/central-end-user-registry/config
+        volumes:
+          - name: config-volume
+            configMap:
+              name: central-end-user-registry-config
+              items:
+              - key: default.json
+                path: default.json
+              - key: knexfile.js
+                path: knexfile.js
