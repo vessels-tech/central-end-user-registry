@@ -11,10 +11,15 @@ const composeOptions = { relativeTo: __dirname }
 
 module.exports = Migrator.migrate()
   .then(() => Db.connect(Config.DATABASE_URI))
-  .then(() => Glue.compose(Manifest, composeOptions))
-  .then(server => server.start().then(() => Logger.info(`Server running at: ${server.info.uri}`)))
+  .then(() =>
+    Glue.compose(Manifest, composeOptions)
+  )
+  .then(server =>
+    server.start().then(() =>
+      Logger.info(`Server running at: ${server.info.uri}`)
+    )
+  )
   .catch(err => {
     Logger.error(err)
     throw err
   })
-

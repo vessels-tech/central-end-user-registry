@@ -23,134 +23,142 @@ Test('routes handler test', handlerTest => {
   })
 
   handlerTest.test('health should', healthTest => {
-    healthTest.test('return status: OK', test => {
-      const reply = (response) => {
-        test.equal(response.status, 'OK')
-        test.end()
+    healthTest.test('return status: OK', async function (test) {
+      const h = {
+        response: (output) => {
+          test.equal(output.status, 'OK')
+          test.end()
+        }
       }
-
-      Handler.health({}, reply)
+      await Handler.health({}, h)
     })
 
     healthTest.end()
   })
 
   handlerTest.test('getUsers should', getUsersTest => {
-    getUsersTest.test('returns users from Service', test => {
+    getUsersTest.test('returns users from Service', async function (test) {
       const number = '12345678'
       const dfspIdentifier = '001:123'
       const user = { id: 1, number, dfspIdentifier }
-      Service.getAll.returns(P.resolve([user]))
+      await Service.getAll.returns(P.resolve([user]))
 
-      const reply = (response) => {
-        test.deepEqual(response, [{ number, dfspIdentifier }])
-        test.end()
+      const h = {
+        response: (output) => {
+          test.deepEqual(output, [{ number, dfspIdentifier }])
+          test.end()
+        }
       }
 
-      Handler.getUsers({}, reply)
+      await Handler.getUsers({}, h)
     })
     getUsersTest.end()
   })
 
   handlerTest.test('getUserByNumber should', userByNumberTest => {
-    userByNumberTest.test('return user from Service.getByNumber', test => {
+    userByNumberTest.test('return user from Service.getByNumber', async function (test) {
       const number = '12345678'
       const dfspIdentifier = '001:123'
       const user = { id: 1, number, dfspIdentifier }
-      Service.getByNumber.returns(P.resolve([user]))
+      await Service.getByNumber.returns(P.resolve([user]))
 
-      const req = {
+      const request = {
         params: { number }
       }
-
-      const reply = (response) => {
-        test.equal(1, response.length)
-        test.deepEqual(response[0], { number, dfspIdentifier })
-        test.end()
+      const h = {
+        response: (output) => {
+          test.equal(1, output.length)
+          test.deepEqual(output[0], { number, dfspIdentifier })
+          test.end()
+        }
       }
 
-      Handler.getUserByNumber(req, reply)
+      await Handler.getUserByNumber(request, h)
     })
 
-    userByNumberTest.test('return NotFoundError is users is null', test => {
+    userByNumberTest.test('return NotFoundError if users is null', async function (test) {
       const number = '12345678'
-      Service.getByNumber.returns(P.resolve(null))
+      await Service.getByNumber.returns(P.resolve(null))
 
-      const req = {
+      const request = {
         params: { number }
       }
+      const h = {}
 
-      const reply = (response) => {
-        test.ok(response instanceof NotFoundError)
-        test.equal(response.message, 'The requested number does not exist')
+      try {
+        await Handler.getUserByNumber(request, h)
+      } catch (err) {
+        test.ok(err instanceof NotFoundError)
+        test.equal(err.message, 'The requested number does not exist')
         test.end()
       }
-
-      Handler.getUserByNumber(req, reply)
     })
 
-    userByNumberTest.test('return NotFoundError is users is empty', test => {
+    userByNumberTest.test('return NotFoundError if users is empty', async function (test) {
       const number = '12345678'
-      Service.getByNumber.returns(P.resolve([]))
+      await Service.getByNumber.returns(P.resolve([]))
 
-      const req = {
+      const request = {
         params: { number }
       }
+      const h = {}
 
-      const reply = (response) => {
-        test.ok(response instanceof NotFoundError)
-        test.equal(response.message, 'The requested number does not exist')
+      try {
+        await Handler.getUserByNumber(request, h)
+      } catch (err) {
+        test.ok(err instanceof NotFoundError)
+        test.equal(err.message, 'The requested number does not exist')
         test.end()
       }
-
-      Handler.getUserByNumber(req, reply)
     })
 
     userByNumberTest.end()
   })
 
   handlerTest.test('registerIdentifier should', registerIdentifierTest => {
-    registerIdentifierTest.test('register user with Service', test => {
+    registerIdentifierTest.test('register user with Service', async function (test) {
       const number = '12345678'
       const dfspIdentifier = '001:123'
       const user = { id: 2, dfspIdentifier, number }
 
-      Service.register.withArgs(Sinon.match({ number, dfspIdentifier })).returns(P.resolve(user))
+      await Service.register.withArgs(Sinon.match({ number, dfspIdentifier })).returns(P.resolve(user))
 
-      const req = {
+      const request = {
         payload: { number, dfspIdentifier }
       }
-
-      const reply = (response) => {
-        test.deepEqual(response, { number, dfspIdentifier })
-        return {
-          code: (statusCode) => {
-            test.equal(statusCode, 201)
-            test.end()
+      const h = {
+        response: (output) => {
+          test.deepEqual(output, { number, dfspIdentifier })
+          return {
+            code: (statusCode) => {
+              test.equal(statusCode, 201)
+              test.end()
+            }
           }
         }
       }
 
-      Handler.registerIdentifier(req, reply)
+      await Handler.registerIdentifier(request, h)
     })
 
-    registerIdentifierTest.test('throw NotFoundException if directory yields empty', test => {
+    registerIdentifierTest.test('throw NotFoundException if directory yields empty', async function (test) {
       const number = '12345678'
       const dfspIdentifier = '001:123'
 
       let error = new Error()
-      Service.register.withArgs(Sinon.match({ number, dfspIdentifier })).returns(P.reject(error))
+      await Service.register.withArgs(Sinon.match({ number, dfspIdentifier })).returns(P.reject(error))
 
-      const req = {
+      const request = {
         payload: { number, dfspIdentifier }
       }
+      let h = {}
 
-      let reply = (e) => {
-        test.equal(e, error)
+      try {
+        await Handler.registerIdentifier(request, h.response)
+      } catch (err) {
+        test.equal(err, error)
         test.end()
       }
-
-      Handler.registerIdentifier(req, reply)
     })
 
     registerIdentifierTest.end()

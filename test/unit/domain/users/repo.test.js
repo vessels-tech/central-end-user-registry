@@ -33,12 +33,12 @@ Test('User Repo test', repoTest => {
       Db.users.find.returns(P.resolve([{ number }]))
 
       Repo.getByNumber(number)
-      .then(response => {
-        test.equal(1, response.length)
-        test.equal(response[0].number, number)
-        test.ok(Db.users.find.calledWith(Sinon.match({ number }), { order: 'dfspIdentifier asc' }))
-        test.end()
-      })
+        .then(response => {
+          test.equal(1, response.length)
+          test.equal(response[0].number, number)
+          test.ok(Db.users.find.calledWith(Sinon.match({ number }), { order: 'dfspIdentifier asc' }))
+          test.end()
+        })
     })
 
     getByNumberTest.end()
@@ -52,13 +52,13 @@ Test('User Repo test', repoTest => {
       Db.users.find.returns(P.resolve([{ number: number1 }, { number: number2 }]))
 
       Repo.getAll()
-      .then(response => {
-        test.equal(response.length, 2)
-        test.equal(response[0].number, number1)
-        test.equal(response[1].number, number2)
-        test.ok(Db.users.find.calledWith({}, { order: 'number asc' }))
-        test.end()
-      })
+        .then(response => {
+          test.equal(response.length, 2)
+          test.equal(response[0].number, number1)
+          test.equal(response[1].number, number2)
+          test.ok(Db.users.find.calledWith({}, { order: 'number asc' }))
+          test.end()
+        })
     })
 
     getAllTest.end()
@@ -70,10 +70,10 @@ Test('User Repo test', repoTest => {
       Db.users.insert.returns(P.resolve(user))
 
       Repo.create(user)
-      .then(() => {
-        test.ok(Db.users.insert.calledWith(user))
-        test.end()
-      })
+        .then(() => {
+          test.ok(Db.users.insert.calledWith(user))
+          test.end()
+        })
     })
 
     createTest.end()

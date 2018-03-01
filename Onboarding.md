@@ -70,7 +70,7 @@ export CREG_DATABASE_URI=postgres://central_end_user_registry:cVq8iFqaLuHy8jjKuA
 ```
 
 * cd into the central_directory project
-* run `nvm install 6.5.0`
+* run `nvm install 8.9.4`
 * run `nvm use`
 * run `npm install -g node-gyp`
 * run `brew install libtool autoconf automake`

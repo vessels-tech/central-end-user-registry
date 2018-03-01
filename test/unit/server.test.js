@@ -63,11 +63,11 @@ Test('server', serverTest => {
       let error = new Error()
       Migrator.migrate.returns(P.reject(error))
       require('../../src/server')
-      .catch(e => {
-        test.equal(e, error)
-        test.ok(Logger.error.calledWith(error))
-        test.end()
-      })
+        .catch(e => {
+          test.equal(e, error)
+          test.ok(Logger.error.calledWith(error))
+          test.end()
+        })
     })
 
     exportingTest.end()

@@ -17,25 +17,23 @@ const userResponse = (user) => {
   }
 }
 
-const getUsers = (req, rep) => {
-  return Service.getAll()
-    .then(users => rep(usersResponse(users)))
+const getUsers = async function (request, h) {
+  const users = await Service.getAll()
+  return h.response(usersResponse(users))
 }
 
-const getUserByNumber = (req, rep) => {
-  return Service.getByNumber(req.params.number)
-    .then(users => rep(usersResponse(users)))
-    .catch(rep)
+const getUserByNumber = async function (request, h) {
+  const users = await Service.getByNumber(request.params.number)
+  return h.response(usersResponse(users))
 }
 
-const registerIdentifier = (req, rep) => {
-  return Service.register(req.payload)
-    .then(user => rep(userResponse(user)).code(201))
-    .catch(rep)
+const registerIdentifier = async function (request, h) {
+  const user = await Service.register(request.payload)
+  return h.response(userResponse(user)).code(201)
 }
 
-const health = (req, rep) => {
-  return rep({ status: 'OK' })
+const health = async function (request, h) {
+  return h.response({ status: 'OK' })
 }
 
 module.exports = {

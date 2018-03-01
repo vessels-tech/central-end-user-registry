@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:6.5.0
+FROM mhart/alpine-node:8.9.4
 
 WORKDIR /opt/central-end-user-registry
 COPY src /opt/central-end-user-registry/src
