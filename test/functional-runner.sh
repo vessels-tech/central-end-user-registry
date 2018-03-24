@@ -1,83 +1,161 @@
-#!/bin/bash
-POSTGRES_USER=${POSTGRES_USER:-postgres}
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-REGISTRY_HOST=${HOST_IP:-localhost}
-FUNC_TEST_CMD=${FUNC_TEST_CMD:-tape \'test/functional/**/*.test.js\' | faucet}
-docker_compose_file=$1
-docker_functional_compose_file=$2
-env_file=$3
+>&2 echo "--==== Functional Tests Runner ====--"
 
-if [ $# -ne 3 ]; then
-    echo "Usage: $0 docker-compose-file docker-functional-compose-file env-file"
-    exit 1
+if [ $# -ne 1 ]; then 
+    echo ""
+    echo "Usage: $0 {env-file}" 
+    echo "{env-file} must contain the following variables:"
+    echo " - DOCKER_IMAGE: Name of Image"
+    echo " - DOCKER_TAG: Tag/Version of Image"
+    echo " - DOCKER_FILE: Recipe to be used for Docker build"
+    echo " - DOCKER_WORKING_DIR: Docker working directory"
+    echo " - POSTGRES_USER: Posgres user"
+    echo " - POSTGRES_PASSWORD: Posgres password"
+    echo " - POSTGRES_HOST: Posgres host name"
+    echo " - POSTGRES_PORT: Posgres container port"
+    echo " - POSTGRES_DB: Posgres database"
+    echo " - POSTGRES_IMAGE: Docker Image for Posgres"
+    echo " - POSTGRES_TAG: Docker tag/version for Posgres"
+    echo " - APP_HOST: Application host name"
+    echo " - APP_DIR_TEST_RESULTS: Location of test results relative to the working directory"
+    echo " - TEST_CMD: Functional test command to be executed"
+    echo ""
+    echo " * IMPORTANT: Ensure you have the required env in the test/.env to execute the application"
+    echo ""
+    exit 1 
 fi
+>&2 echo ""
+>&2 echo "====== Loading environment variables ======"
+cat $1
+. $1
+>&2 echo "==========================================="
+>&2 echo ""
 
-psql() {
+>&2 echo "Executing Functional Tests for $APP_HOST ..."
+
+>&2 echo "Creating local directory to store test results"
+mkdir -p test/results
+
+fpsql() {
 	docker run --rm -i \
-		--net centralenduserregistry_back \
 		--entrypoint psql \
-		-e PGPASSWORD=$POSTGRES_PASSWORD \
-		"postgres:9.4" \
-    --host postgres \
+    --link $POSTGRES_HOST \
+    -e PGUSER=$POSTGRES_USER \
+    -e PGPASSWORD=$POSTGRES_PASSWORD \
+    -e PGDATABASE=$POSTGRES_DB \
+    "$POSTGRES_IMAGE:$POSTGRES_TAG" \
+    --host $POSTGRES_HOST \
 		--username $POSTGRES_USER \
-    --dbname postgres \
+    --dbname $POSTGRES_DB \
 		--quiet --no-align --tuples-only \
 		"$@"
 }
 
 is_psql_up() {
-    psql -c '\l' > /dev/null 2>&1
+    fpsql -c '\l' > /dev/null 2>&1
 }
 
-is_central_end_user_registry_up() {
-    curl --output /dev/null --silent --head --fail http://${REGISTRY_HOST}:3001/health
+stop_docker() {
+  >&2 echo "Posgres-functional is shutting down $POSTGRES_HOST"
+  (docker stop $POSTGRES_HOST && docker rm $POSTGRES_HOST) > /dev/null 2>&1
+  >&2 echo "$APP_HOST environment is shutting down"
+  (docker stop $APP_HOST && docker rm $APP_HOST) > /dev/null 2>&1
+}
+
+clean_docker() {
+  stop_docker
+  >&2 echo "Removing docker test image $DOCKER_IMAGE:$DOCKER_TAG"
+  (docker rmi $DOCKER_IMAGE:$DOCKER_TAG) > /dev/null 2>&1
+}
+
+fcurl() {
+	docker run --rm -i \
+		--link $APP_HOST \
+		--entrypoint curl \
+		"jlekie/curl:latest" \
+        --output /dev/null --silent --head --fail \
+		"$@"
+}
+
+is_api_up() {
+    fcurl "http://centralenduserregistry_central-end-user-registry_1:3001/health?"
 }
 
 run_test_command()
 {
-  eval "$FUNC_TEST_CMD"
+  >&2 echo "Running $APP_HOST Test command: $TEST_CMD"
+  docker exec -ti $APP_HOST sh -c "$TEST_CMD"
 }
 
-shutdown_and_remove() {
-  docker-compose -f $docker_compose_file -f $docker_functional_compose_file down --rmi local
+start_central_registry () {
+  docker run -d -i \
+    --link $POSTGRES_HOST \
+    --name $APP_HOST \
+    --env POSTGRES_USER="$POSTGRES_USER" \
+    --env POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+    --env POSTGRES_HOST="$POSTGRES_HOST" \
+    --env POSTGRES_PORT="$POSTGRES_PORT" \
+    --env POSTGRES_DB="$POSTGRES_DB" \
+    --env CREG_DATABASE_URI="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB" \
+    --env CREG_PORT="3001" \
+    --env CREG_HOSTNAME="http://central-end-user-registry" \
+    -p 3001:3001 \
+		$DOCKER_IMAGE:$DOCKER_TAG \
+    /bin/sh \
+    -c "node src/server.js"
 }
 
->&2 echo "Loading environment variables"
-source $env_file
+>&2 echo "Building Docker Image $DOCKER_IMAGE:$DOCKER_TAG with $DOCKER_FILE"
+docker build --no-cache -t $DOCKER_IMAGE:$DOCKER_TAG -f $DOCKER_FILE .
+echo "result "$?""
+if [ "$?" != 0 ]
+then
+  >&2 echo "Build failed...exiting"
+  clean_docker
+  exit 1
+fi
 
+stop_docker
 >&2 echo "Postgres is starting"
-docker-compose -f $docker_compose_file -f $docker_functional_compose_file up -d postgres > /dev/null 2>&1
+docker run --name $POSTGRES_HOST -d -p $POSTGRES_PORT:$POSTGRES_PORT -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD -e POSTGRES_USER=$POSTGRES_USER -e POSTGRES_DB=$POSTGRES_DB "$POSTGRES_IMAGE:$POSTGRES_TAG" > /dev/null 2>&1
+
+if [ "$?" != 0 ]
+then
+  >&2 echo "Starting Postgres failed...exiting"
+  clean_docker
+  exit 1
+fi
 
 until is_psql_up; do
   >&2 echo "Postgres is unavailable - sleeping"
   sleep 1
 done
 
->&2 echo "Postgres is up - creating functional database"
-psql <<'EOSQL'
-    DROP DATABASE IF EXISTS "central_registry_functional";
-	  CREATE DATABASE "central_registry_functional";
-EOSQL
+>&2 printf "Central-end-user-registry is starting: "
+start_central_registry
 
->&2 printf "Central-end-user-registry is starting ..."
-docker-compose -f $docker_compose_file -f $docker_functional_compose_file up -d central-registry
-
-until is_central_end_user_registry_up; do
+>&2 printf "Starting up..."
+until is_api_up; do
   >&2 printf "."
-  sleep 1
+  sleep 5
 done
 
->&2 echo " done"
-
->&2 echo "Functional tests are starting"
-set -o pipefail && run_test_command
+sleep 5
+>&2 echo " Functional tests are starting"
+run_test_command
 test_exit_code=$?
 
 if [ "$test_exit_code" != 0 ]
 then
-  docker logs centralenduserregistry_central-registry_1
+  >&2 echo "Functional tests failed...exiting"
+  >&2 echo "Test environment logs..."
+  docker logs $APP_HOST
+  clean_docker
+  exit 1
 fi
 
-shutdown_and_remove
+>&2 echo "Copy results to local directory"
+docker cp $APP_HOST:$DOCKER_WORKING_DIR/$APP_DIR_TEST_RESULTS test
+
+clean_docker
 
 exit "$test_exit_code"

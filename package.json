@@ -9,7 +9,11 @@
     "url": "git@github.com:mojaloop/central-end-user-registry.git"
   },
   "config": {
-    "knex": "--knexfile ./config/knexfile.js"
+    "knex": "--knexfile ./config/knexfile.js",
+    "images": {
+      "api": "central-end-user-registry"
+    }
+
   },
   "standard": {
     "ignore": [
@@ -18,21 +22,26 @@
   },
   "scripts": {
     "start": "node src/server.js",
+    "dev": "npm run docker:stop && docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d",
     "test": "npm run test:unit | faucet",
     "pretest": "standard",
-    "test:unit": "tapes 'test/unit/**/*.test.js'",
-    "test:xunit": "npm run test:unit | tap-xunit",
+    "test:unit": "tape 'test/unit/**/*.test.js'",
     "test:all": "npm test && npm run test:integration && npm run test:functional",
-    "test:integration": "./test/integration-runner.sh .env",
-    "test:functional": "./test/functional-runner.sh docker-compose.yml docker-compose.functional.yml .env",
-    "test:circle": "./test/functional-runner.sh docker-compose.yml docker-compose.circle.yml .env",
-    "test:coverage": "istanbul cover tapes -- 'test/unit/**/*.test.js'",
+    "test:xunit": "tape 'test/unit/**/*.test.js' | tap-xunit",
+    "test:coverage": "istanbul cover tape -- 'test/unit/**/*.test.js'",
     "test:coverage-check": "npm run test:coverage && istanbul check-coverage",
+    "test:integration": "./test/integration-runner.sh test/integration_runner.env",
+    "test:functional": "./test/functional-runner.sh test/functional_runner.env",
+    "test:circle": "./test/functional-runner.sh docker-compose.yml docker-compose.circle.yml .env",
+    "db:create": "db-migrate db:create central_directory $npm_package_config_db",
+    "db:psql": "docker run -it --net centralenduserregistry_back --rm postgres:9.4 sh -c 'exec psql -h postgres -p \"$POSTGRES_PORT_5432_TCP_PORT\" -U central_end_user_registry'",
     "migrate": "knex migrate:latest $npm_package_config_knex",
     "migrate:create": "knex migrate:make $npm_package_config_knex",
     "migrate:rollback": "knex migrate:rollback $npm_package_config_knex",
     "migrate:current": "knex migrate:currentVersion $npm_package_config_knex",
-    "docker:clean": "docker-compose -f docker-compose.yml -f docker-compose.functional.yml down --rmi local"
+    "docker:stop": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.functional.yml stop",
+    "docker:rm": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.functional.yml rm -f -v",
+    "docker:clean": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.functional.yml down --rmi local"
   },
   "dependencies": {
     "@mojaloop/central-services-database": "0.4.0",

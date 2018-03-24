@@ -1,6 +1,9 @@
 version: '2'
 services:
-  central-registry:
-    build: .
+  central-end-user-registry:
+    image: central-end-user-registry:latest
     environment:
-     CREG_DATABASE_URI: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/central_registry_functional"
+     CREG_DATABASE_URI: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+     CREG_PORT: "3001"
+     CREG_HOSTNAME: "http://central-end-user-registry"
+
