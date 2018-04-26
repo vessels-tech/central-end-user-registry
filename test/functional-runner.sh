@@ -54,11 +54,26 @@ is_psql_up() {
     fpsql -c '\l' > /dev/null 2>&1
 }
 
+ftest() {
+	docker run --rm -i \
+    --link $POSTGRES_HOST \
+    --env POSTGRES_USER="$POSTGRES_USER" \
+    --env POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+    --env POSTGRES_HOST="$POSTGRES_HOST" \
+    --env POSTGRES_PORT="$POSTGRES_PORT" \
+    --env POSTGRES_DB="$POSTGRES_DB" \
+		"$DOCKER_IMAGE:$DOCKER_TAG" \
+    /bin/sh \
+    -c \
+    "$@"
+}
+
 stop_docker() {
   >&2 echo "Posgres-functional is shutting down $POSTGRES_HOST"
   (docker stop $POSTGRES_HOST && docker rm $POSTGRES_HOST) > /dev/null 2>&1
   >&2 echo "$APP_HOST environment is shutting down"
   (docker stop $APP_HOST && docker rm $APP_HOST) > /dev/null 2>&1
+  (docker stop $APP_TEST_HOST && docker rm $APP_TEST_HOST) > /dev/null 2>&1
 }
 
 clean_docker() {
@@ -77,13 +92,20 @@ fcurl() {
 }
 
 is_api_up() {
-    fcurl "http://centralenduserregistry_central-end-user-registry_1:3001/health?"
+    fcurl "http://$APP_HOST:$APP_PORT/health?"
 }
 
 run_test_command()
 {
-  >&2 echo "Running $APP_HOST Test command: $TEST_CMD"
-  docker exec -ti $APP_HOST sh -c "$TEST_CMD"
+ >&2 echo "Running $APP_HOST Test command: $TEST_CMD"
+ docker run -i \
+   --link $APP_HOST \
+   --name $APP_TEST_HOST \
+   --env HOST_IP="$APP_HOST" \
+   --env CREG_DATABASE_URI="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB" \
+   $DOCKER_IMAGE:$DOCKER_TAG \
+   /bin/sh \
+   -c "source test/.env; $TEST_CMD"
 }
 
 start_central_registry () {
@@ -95,13 +117,10 @@ start_central_registry () {
     --env POSTGRES_HOST="$POSTGRES_HOST" \
     --env POSTGRES_PORT="$POSTGRES_PORT" \
     --env POSTGRES_DB="$POSTGRES_DB" \
-    --env CREG_DATABASE_URI="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB" \
-    --env CREG_PORT="3001" \
-    --env CREG_HOSTNAME="http://central-end-user-registry" \
-    -p 3001:3001 \
+    -p $APP_PORT:$APP_PORT \
 		$DOCKER_IMAGE:$DOCKER_TAG \
     /bin/sh \
-    -c "node src/server.js"
+    -c "source test/.env; $APP_CMD"
 }
 
 >&2 echo "Building Docker Image $DOCKER_IMAGE:$DOCKER_TAG with $DOCKER_FILE"
@@ -130,6 +149,16 @@ until is_psql_up; do
   sleep 1
 done
 
+>&2 echo "Running migrations"
+ftest "source test/.env; npm run migrate"
+
+if [ "$?" != 0 ]
+then
+  >&2 echo "Migration failed...exiting"
+  clean_docker
+  exit 1
+fi
+
 >&2 printf "Central-end-user-registry is starting: "
 start_central_registry
 
@@ -139,23 +168,21 @@ until is_api_up; do
   sleep 5
 done
 
-sleep 5
 >&2 echo " Functional tests are starting"
 run_test_command
 test_exit_code=$?
+
+>&2 echo "Displaying test logs"
+docker logs $APP_TEST_HOST
+
+>&2 echo "Copy results to local directory"
+docker cp $APP_TEST_HOST:$DOCKER_WORKING_DIR/$APP_DIR_TEST_RESULTS test
 
 if [ "$test_exit_code" != 0 ]
 then
   >&2 echo "Functional tests failed...exiting"
   >&2 echo "Test environment logs..."
-  docker logs $APP_HOST
-  clean_docker
-  exit 1
 fi
 
->&2 echo "Copy results to local directory"
-docker cp $APP_HOST:$DOCKER_WORKING_DIR/$APP_DIR_TEST_RESULTS test
-
 clean_docker
-
 exit "$test_exit_code"
