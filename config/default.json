@@ -1,4 +1,5 @@
 {
   "PORT": 3001,
-  "HOSTNAME": "http://central-end-user-registry"
+  "HOSTNAME": "http://central-end-user-registry",
+  "DATABASE_URI": "mysql://central_end_user_registry:JKp6xEc8ramFTDTRNH@0.0.0.0:3306/central_end_user_registry"
 }

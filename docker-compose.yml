@@ -1,6 +1,11 @@
-version: '2'
+version: "3.7"
 services:
   central-registry:
+    build: 
+      context: .
+      cache_from:
+        - mojaloop/central-end-user-registry
+    container_name: cr-central-registry
     env_file: .env
     ports:
      - "3001:3001"
@@ -8,13 +13,19 @@ services:
      - mysql
     networks:
      - back
+    environment:
+      - CLEDG_DATABASE_URI=mysql://central_end_user_registry:JKp6xEc8ramFTDTRNH@mysql:3306/central_end_user_registry
+
   mysql:
     env_file: .env
     image: mysql/mysql-server:5.7
+    container_name: cr-mysql
     networks:
-     - back
-    volumes:
-     - mysql-data:/var/lib/mysql
+      - back
+    ports:
+     - "3306:3306"
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
 networks:
   back: {}
 volumes:
