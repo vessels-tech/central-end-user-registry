@@ -1,4 +1,12 @@
-# central-end-user-registry
+# [DEPRECATED] central-end-user-registry
+
+## Deprecation Notice
+
+The central-end-user-registry service was deprecated as of January 2018. This service is no longer maintained, and is no longer referenced by any releases of Mojaloop.
+
+For a list of active Mojaloop repos, please refer to [Repo Details](https://mojaloop.io/documentation/repositories/) section of the Mojaloop documentation.
+
+## Summary
 
 The central end user registry is an example service that shows the power of the [central directory](https://github.com/mojaloop/central-directory). It can be used to register a DFSP's payment URL and receive a user number in return. The user number can then be looked up through the central directory when making a payment.
 
